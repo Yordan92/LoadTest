@@ -1,0 +1,122 @@
+version: "3"
+
+services:
+
+  # CAUTION: do not change the mount points inside of the containers
+  #
+  # volume config for the root containers can be updated to use an externally
+  # provisioned volume so it can persist.
+
+  root-ascent-2.0.4.c69.0:
+    image: rosette/root-ascent:2.0.4.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rbl-7.46.3.c69.0:
+    image: rosette/root-rbl:7.46.3.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-ara-7.55.6.c69.0:
+    image: rosette/root-rex-ara:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-eng-7.55.6.c69.0:
+    image: rosette/root-rex-eng:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-fra-7.55.6.c69.0:
+    image: rosette/root-rex-fra:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-por-7.55.6.c69.0:
+    image: rosette/root-rex-por:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-root-7.55.6.c69.0:
+    image: rosette/root-rex-root:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-vie-7.55.6.c69.0:
+    image: rosette/root-rex-vie:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rex-zho-7.55.6.c69.0:
+    image: rosette/root-rex-zho:7.55.6.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-rli-7.23.8.c69.0:
+    image: rosette/root-rli:7.23.8.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-tcat-2.0.15.c69.0:
+    image: rosette/root-tcat:2.0.15.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+  root-topics-2.0.1.c69.0:
+    image: rosette/root-topics:2.0.1.c69.0
+    volumes:
+     - rosette-roots-vol:/roots-vol
+
+
+  rosette-server:
+    image: rosette/server-enterprise:${rosette_version}
+    depends_on:
+     - root-ascent-2.0.4.c69.0
+     - root-rbl-7.46.3.c69.0
+     - root-rex-ara-7.55.6.c69.0
+     - root-rex-eng-7.55.6.c69.0
+     - root-rex-fra-7.55.6.c69.0
+     - root-rex-por-7.55.6.c69.0
+     - root-rex-root-7.55.6.c69.0
+     - root-rex-vie-7.55.6.c69.0
+     - root-rex-zho-7.55.6.c69.0
+     - root-rli-7.23.8.c69.0
+     - root-tcat-2.0.15.c69.0
+     - root-topics-2.0.1.c69.0
+
+    volumes:
+      - rosette-roots-vol:/rosette/server/roots:ro
+      - ./conf/rosette-license.xml:/rosette/server/launcher/config/rosapi/rosette-license.xml:ro
+    ports:
+      - "8181:8181"
+      - "8080:8080"
+    environment:
+       - ROSETTE_JVM_MAX_HEAP=32  # max Java heap size in GB, default is 4, must be >=4; to run all endpoints the recommended minimum is 16
+       - ROSETTE_WORKER_THREADS=20  # number of worker threads, default is 2, must be >=1
+       - ROSETTE_PRE_WARM=true  # pre-warm the server on startup, default is false, valid values are true|false
+       - ROSETTE_DOC_HOST_PORT=localhost:8181  # hostname should be accessible on the network, port value should match mapped port above
+#      - ROSETTE_USAGE_TRACKER_ROOT= # optional directory to log metering data if not using the ./config directory, if set and metering is disabled it will be enabled.
+       - _JAVA_OPTIONS=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=8080 -Dcom.sun.management.jmxremote.rmi.port=8080 -Djava.rmi.server.hostname=localhost
+    command:
+      - /bin/bash
+      - -c
+      - |
+          while ! [[ \
+           true \
+           && -f /rosette/server/roots/.root-ascent-2.0.4.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rbl-7.46.3.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-ara-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-eng-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-fra-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-por-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-root-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-vie-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rex-zho-7.55.6.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-rli-7.23.8.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-tcat-2.0.15.c69.0.unpacked \
+           && -f /rosette/server/roots/.root-topics-2.0.1.c69.0.unpacked \
+          ]] ; do
+            echo "waiting for roots to be unpacked ..."
+            sleep 10
+          done
+          bash /rosette/server/bin/update_config.sh && /rosette/server/bin/launch.sh console
+
+volumes:
+  # if a local volume is not desirable, change this to suit your needs
+  rosette-roots-vol:
+    labels:
+      com.rosette.name: "rosette-roots-volume"
+      com.rosette.type: "volume"
+      com.rosette.distribution: "Rosette Server"
+      com.rosette.distribution.version: "${rosette_version}"
+      maintainer: "release@rosette.com"
+      vendor: "Basis Technology"
